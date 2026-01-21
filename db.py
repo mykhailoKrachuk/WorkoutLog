@@ -43,6 +43,27 @@ def init_db():
 
     CREATE INDEX IF NOT EXISTS idx_sets_workout_id ON Sets(workout_id);
     CREATE INDEX IF NOT EXISTS idx_sets_exercise_id ON Sets(exercise_id);
+
+    CREATE TABLE IF NOT EXISTS Templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        note TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS TemplateSets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL,
+        exercise_id INTEGER NOT NULL,
+        weight REAL NOT NULL CHECK(weight >= 0),
+        reps INTEGER NOT NULL CHECK(reps > 0),
+        set_number INTEGER NULL,
+        FOREIGN KEY (template_id) REFERENCES Templates(id) ON DELETE CASCADE,
+        FOREIGN KEY (exercise_id) REFERENCES Exercises(id) ON DELETE RESTRICT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_template_sets_template_id ON TemplateSets(template_id);
+    CREATE INDEX IF NOT EXISTS idx_template_sets_exercise_id ON TemplateSets(exercise_id);
     """
 
     with get_conn() as conn:
@@ -51,6 +72,19 @@ def init_db():
         # миграция для старой базы, где этих колонок ещё нет
         _add_column_if_missing(conn, "Workouts", "note", "TEXT")
         _add_column_if_missing(conn, "Exercises", "note", "TEXT")
+        # Додаємо поле для відстеження шаблону
+        _add_column_if_missing(conn, "Workouts", "template_id", "INTEGER")
+        
+        # Додаємо індекс для template_id та зовнішній ключ
+        try:
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_workouts_template_id 
+                ON Workouts(template_id)
+            """)
+            # Перевіряємо чи існує зовнішній ключ (SQLite не підтримує додавання FK через ALTER)
+            # Тому просто додамо індекс, а валідацію зробимо на рівні застосунку
+        except sqlite3.OperationalError:
+            pass  # Індекс вже існує
 
 
 def seed_exercises():
