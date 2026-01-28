@@ -1,0 +1,164 @@
+.create-workout-screen {
+  min-height: 100vh;
+  background-color: #000000;
+}
+
+.create-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #000000;
+  border-bottom: 1px solid #333333;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.back-button,
+.save-button {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+}
+
+.back-button:hover,
+.save-button:hover {
+  background-color: #2a2a2a;
+}
+
+.create-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.create-content {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.sets-container {
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #333333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.sets-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sets-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.add-set-button {
+  background-color: #3498db;
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-set-button:hover {
+  background-color: #2980b9;
+}
+
+.sets-table {
+  width: 100%;
+}
+
+.sets-table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 80px;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #333333;
+  margin-bottom: 12px;
+}
+
+.sets-table-header .header-cell {
+  font-size: 13px;
+  font-weight: 600;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .create-header {
+    padding: 12px 16px;
+  }
+
+  .create-title {
+    font-size: 16px;
+  }
+
+  .back-button,
+  .save-button {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .create-content {
+    padding: 16px;
+  }
+
+  .sets-container {
+    padding: 16px;
+  }
+
+  .sets-header h2 {
+    font-size: 18px;
+  }
+
+  .add-set-button {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .create-content {
+    padding: 12px;
+  }
+
+  .sets-container {
+    padding: 12px;
+  }
+
+  .sets-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

@@ -1,0 +1,135 @@
+.set-row {
+  padding: 12px;
+  border: 1px solid #333333;
+  border-radius: 8px;
+  background-color: #2a2a2a;
+  transition: all 0.2s ease;
+}
+
+.set-row:hover {
+  border-color: #3498db;
+  background-color: #333333;
+  box-shadow: 0 2px 4px rgba(52, 152, 219, 0.3);
+}
+
+.set-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 60px;
+  gap: 12px;
+  align-items: center;
+}
+
+.set-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.set-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #444444;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #1a1a1a;
+  transition: border-color 0.2s ease;
+  min-width: 0;
+}
+
+.set-input:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.set-input::placeholder {
+  color: #666666;
+}
+
+.set-unit {
+  font-size: 12px;
+  color: #aaaaaa;
+  white-space: nowrap;
+  min-width: fit-content;
+}
+
+.set-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.remove-set-button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background-color: #e74c3c;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: 300;
+}
+
+.remove-set-button:hover {
+  background-color: #c0392b;
+  transform: scale(1.1);
+}
+
+.remove-set-button:active {
+  transform: scale(0.95);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .set-row {
+    padding: 10px;
+  }
+
+  .set-row-grid {
+    grid-template-columns: 1fr 1fr 1fr 50px;
+    gap: 8px;
+  }
+
+  .set-input {
+    padding: 8px 10px;
+    font-size: 14px;
+  }
+
+  .set-unit {
+    font-size: 11px;
+  }
+
+  .remove-set-button {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .set-row-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .set-input-group {
+    width: 100%;
+  }
+
+  .set-actions {
+    justify-content: flex-end;
+  }
+
+  .set-row-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

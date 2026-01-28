@@ -1,0 +1,179 @@
+.workout-history {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.workout-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.workout-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #333333;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.workout-item:last-child {
+  border-bottom: none;
+}
+
+.workout-item:hover {
+  background-color: #2a2a2a;
+  margin: 0 -20px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+.workout-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.delete-workout-btn {
+  background-color: #e74c3c;
+  color: #ffffff;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  opacity: 0;
+}
+
+.workout-item:hover .delete-workout-btn {
+  opacity: 1;
+}
+
+.delete-workout-btn:hover {
+  background-color: #c0392b;
+}
+
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 20px;
+}
+
+.delete-confirm-content {
+  background-color: #1a1a1a;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 100%;
+  border: 1px solid #e74c3c;
+}
+
+.delete-confirm-content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+}
+
+.delete-confirm-content p {
+  font-size: 14px;
+  color: #aaaaaa;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+.delete-confirm-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.delete-cancel-btn,
+.delete-confirm-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.delete-cancel-btn {
+  background-color: #444444;
+  color: #ffffff;
+}
+
+.delete-cancel-btn:hover {
+  background-color: #555555;
+}
+
+.delete-confirm-btn {
+  background-color: #e74c3c;
+  color: #ffffff;
+}
+
+.delete-confirm-btn:hover {
+  background-color: #c0392b;
+}
+
+.workout-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.workout-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+  color: #aaaaaa;
+}
+
+.workout-date {
+  font-weight: 500;
+}
+
+.workout-exercises {
+  color: #888888;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888888;
+  font-size: 14px;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .workout-history {
+    max-height: 300px;
+  }
+
+  .workout-name {
+    font-size: 14px;
+  }
+
+  .workout-meta {
+    font-size: 12px;
+  }
+}
+
