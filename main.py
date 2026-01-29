@@ -1,10 +1,23 @@
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, constr, Field
 from typing import Optional
 import sqlite3
 from db import init_db, seed_exercises, get_conn
 
 app = FastAPI(title="Workout App", description="API для отслеживания тренировок")
+
+# Allow local React dev server (http://localhost:3000) to call this API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 NonEmptyStr = constr(strip_whitespace=True, min_length=1)
 
