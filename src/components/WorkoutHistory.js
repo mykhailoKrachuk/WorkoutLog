@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import WorkoutDetailsModal from './WorkoutDetailsModal';
-import { getWorkouts, updateWorkout, deleteWorkout as deleteWorkoutStorage } from '../utils/storage';
+import { deleteWorkout, getWorkoutsHistory } from '../utils/api';
 import '../styles/components/WorkoutHistory.css';
 
 const WorkoutHistory = forwardRef((props, ref) => {
@@ -15,9 +15,47 @@ const WorkoutHistory = forwardRef((props, ref) => {
     loadWorkouts();
   }, []);
 
-  const loadWorkouts = () => {
-    const savedWorkouts = getWorkouts();
-    setWorkouts(savedWorkouts);
+  const loadWorkouts = async () => {
+    try {
+      const data = await getWorkoutsHistory({ limit: 50, includeStats: false });
+      const list = (data?.workouts || []).map((w) => ({
+        id: w.id,
+        date: w.date,
+        name: w.type || w.template_name || 'Workout',
+        note: w.note,
+        exercises: w.statistics?.exercises_count ?? 0,
+        exercisesList: (w.sets || []).reduce((acc, s) => {
+          const key = String(s.exercise_id);
+          if (!acc[key]) {
+            acc[key] = {
+              id: s.exercise_id,
+              exerciseId: s.exercise_id,
+              exercise: s.exercise_name,
+              muscleGroup: s.muscle_group,
+              series: [],
+              sets: 0,
+              weight: s.weight,
+              reps: s.reps,
+              notes: '',
+            };
+          }
+          acc[key].series.push({ setNumber: s.set_number, weight: s.weight, reps: s.reps });
+          acc[key].sets = acc[key].series.length;
+          return acc;
+        }, {}),
+      }));
+
+      // exercisesList reducer returns map; convert to array
+      const normalized = list.map((w) => ({
+        ...w,
+        exercisesList: Object.values(w.exercisesList || {}),
+      }));
+
+      setWorkouts(normalized);
+    } catch (e) {
+      console.error('Failed to load workouts history:', e);
+      setWorkouts([]);
+    }
   };
 
   // Expose load function for parent component
@@ -49,8 +87,9 @@ const WorkoutHistory = forwardRef((props, ref) => {
 
   const handleDeleteConfirm = () => {
     if (workoutToDelete) {
-      deleteWorkoutStorage(workoutToDelete.id);
-      loadWorkouts();
+      deleteWorkout(workoutToDelete.id)
+        .then(() => loadWorkouts())
+        .catch((e) => console.error('Failed to delete workout:', e));
       setShowDeleteConfirm(false);
       setWorkoutToDelete(null);
       if (selectedWorkout && selectedWorkout.id === workoutToDelete.id) {
@@ -65,7 +104,7 @@ const WorkoutHistory = forwardRef((props, ref) => {
   };
 
   const handleSaveWorkout = (updatedWorkout) => {
-    updateWorkout(updatedWorkout.id, updatedWorkout);
+    // Editing not wired to API yet in this UI; just refresh.
     loadWorkouts();
   };
 
@@ -112,8 +151,9 @@ const WorkoutHistory = forwardRef((props, ref) => {
         }}
         workout={selectedWorkout}
         onDelete={(id) => {
-          deleteWorkoutStorage(id);
-          loadWorkouts();
+          deleteWorkout(id)
+            .then(() => loadWorkouts())
+            .catch((e) => console.error('Failed to delete workout:', e));
           setShowDetails(false);
           setSelectedWorkout(null);
         }}

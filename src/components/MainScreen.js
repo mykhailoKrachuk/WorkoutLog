@@ -3,7 +3,6 @@ import WorkoutHistory from './WorkoutHistory';
 import Records from './Records';
 import Statistics from './Statistics';
 import CreateWorkoutModal from './CreateWorkoutModal';
-import { saveWorkout } from '../utils/storage';
 import '../styles/components/MainScreen.css';
 
 const MainScreen = () => {
@@ -16,7 +15,6 @@ const MainScreen = () => {
   };
 
   const handleSaveWorkout = (workout) => {
-    saveWorkout(workout);
     // Reload workout history after a short delay to ensure state updates
     setTimeout(() => {
       if (workoutHistoryRef.current) {

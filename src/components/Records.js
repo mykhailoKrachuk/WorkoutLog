@@ -1,106 +1,60 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import EditRecordModal from './EditRecordModal';
 import ErrorAlert from './ErrorAlert';
-import { getWorkouts } from '../utils/storage';
+import { getRecords } from '../utils/api';
 import '../styles/components/Records.css';
 
 const Records = () => {
-  const [selectedWorkout, setSelectedWorkout] = useState('All Workouts');
+  const [sortBy, setSortBy] = useState('max_weight');
   const [editingRecord, setEditingRecord] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState(null);
   const [editedRecords, setEditedRecords] = useState({});
   const [deletedRecordIds, setDeletedRecordIds] = useState(new Set());
-  const [workouts, setWorkouts] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // Load workouts from localStorage
   useEffect(() => {
-    loadWorkouts();
-    // Listen for workout updates
-    const handleWorkoutUpdate = () => {
-      loadWorkouts();
+    let cancelled = false;
+    setIsLoading(true);
+    setShowErrorAlert(false);
+    setErrorMessage('');
+
+    getRecords({ sortBy })
+      .then((data) => {
+        if (cancelled) return;
+        const rows = (data?.records || []).map((r) => ({
+          id: String(r.exercise_id),
+          exercise: r.exercise_name,
+          muscleGroup: r.muscle_group,
+          maxWeight: r.max_weight || 0,
+          maxReps: r.max_reps || 0,
+          maxSets: r.total_sets || 0,
+          lastDate: r.last_date || new Date().toISOString().split('T')[0],
+          workoutName: r.last_workout_type || 'Workout',
+        }));
+        setRecords(rows);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setErrorMessage(e?.message || 'Failed to load records');
+        setShowErrorAlert(true);
+        setRecords([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
     };
-    window.addEventListener('workoutSaved', handleWorkoutUpdate);
-    return () => window.removeEventListener('workoutSaved', handleWorkoutUpdate);
-  }, []);
+  }, [sortBy]);
 
-  const loadWorkouts = () => {
-    const savedWorkouts = getWorkouts();
-    setWorkouts(savedWorkouts);
-  };
-
-
-  const workoutOptions = useMemo(() => {
-    const uniqueNames = [...new Set(workouts.map(w => w.name))];
-    return ['All Workouts', ...uniqueNames];
-  }, [workouts]);
-
-  // Вычисление records (лучших результатов по каждому упражнению)
-  const computedRecords = useMemo(() => {
-    const recordsMap = {};
-
-    // Фильтрация по выбранной тренировке
-    const filteredWorkouts = selectedWorkout === 'All Workouts' 
-      ? workouts 
-      : workouts.filter(w => w.name === selectedWorkout);
-
-    // Сбор всех упражнений из выбранных тренировок
-    filteredWorkouts.forEach(workout => {
-      const exercisesList = workout.exercisesList || [];
-      const workoutDate = workout.date || workout.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0];
-      
-      exercisesList.forEach(ex => {
-        const key = ex.exercise;
-        const exerciseDate = ex.date || workoutDate;
-        const weight = ex.weight || 0;
-        const reps = ex.reps || 0;
-        const sets = ex.sets || 0;
-        
-        if (!recordsMap[key]) {
-          recordsMap[key] = {
-            id: `${ex.exercise}-${ex.muscleGroup}`,
-            exercise: ex.exercise,
-            muscleGroup: ex.muscleGroup,
-            maxWeight: weight,
-            maxReps: reps,
-            maxSets: sets,
-            lastDate: exerciseDate,
-            workoutName: workout.name
-          };
-        } else {
-          // Обновление максимальных значений
-          if (weight > recordsMap[key].maxWeight) {
-            recordsMap[key].maxWeight = weight;
-          }
-          if (reps > recordsMap[key].maxReps) {
-            recordsMap[key].maxReps = reps;
-          }
-          if (sets > recordsMap[key].maxSets) {
-            recordsMap[key].maxSets = sets;
-          }
-          // Обновление последней даты
-          if (new Date(exerciseDate) > new Date(recordsMap[key].lastDate)) {
-            recordsMap[key].lastDate = exerciseDate;
-            recordsMap[key].workoutName = workout.name;
-          }
-        }
-      });
-    });
-
-    return Object.values(recordsMap);
-  }, [selectedWorkout]);
-
-  // Применение редактированных записей к computed records и фильтрация удаленных
-  const records = useMemo(() => {
-    return computedRecords
-      .filter(record => !deletedRecordIds.has(record.id))
-      .map(record => {
-        if (editedRecords[record.id]) {
-          return editedRecords[record.id];
-        }
-        return record;
-      });
-  }, [computedRecords, editedRecords, deletedRecordIds]);
+  const visibleRecords = records
+    .filter(record => !deletedRecordIds.has(record.id))
+    .map(record => (editedRecords[record.id] ? editedRecords[record.id] : record));
 
   const handleEdit = (record) => {
     setEditingRecord(record);
@@ -143,27 +97,40 @@ const Records = () => {
 
   return (
     <div className="records">
+      {showErrorAlert && (
+        <ErrorAlert
+          message={errorMessage}
+          onClose={() => {
+            setShowErrorAlert(false);
+            setErrorMessage('');
+          }}
+        />
+      )}
       <div className="records-header">
         <select 
           className="workout-selector"
-          value={selectedWorkout}
-          onChange={(e) => setSelectedWorkout(e.target.value)}
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
         >
-          {workoutOptions.map((workout) => (
-            <option key={workout} value={workout}>
-              {workout}
-            </option>
-          ))}
+          <option value="max_weight">Max Weight</option>
+          <option value="max_reps">Max Reps</option>
+          <option value="max_volume">Max Volume</option>
+          <option value="muscle_group">Muscle Group</option>
+          <option value="name">Name</option>
         </select>
       </div>
       
       <div className="records-list">
-        {records.length === 0 ? (
+        {isLoading ? (
+          <div className="records-placeholder">
+            <p>Loading...</p>
+          </div>
+        ) : visibleRecords.length === 0 ? (
           <div className="records-placeholder">
             <p>No records yet</p>
           </div>
         ) : (
-          records.map((record) => (
+          visibleRecords.map((record) => (
             <div key={record.id} className="record-item">
               <div className="record-header">
                 <div>

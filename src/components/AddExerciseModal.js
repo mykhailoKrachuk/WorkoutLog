@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import ErrorAlert from './ErrorAlert';
+import { createExercise, listExercises } from '../utils/api';
 import '../styles/components/AddExerciseModal.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://127.0.0.1:8000';
 
 const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState('');
@@ -15,6 +15,7 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
   const [notes, setNotes] = useState('');
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
 
   const [muscleGroups, setMuscleGroups] = useState([]);
   const [exercisesByGroup, setExercisesByGroup] = useState({});
@@ -26,29 +27,23 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
     let cancelled = false;
     setIsLoadingExercises(true);
 
-    fetch(`${API_BASE_URL}/exercises`)
-      .then(async (res) => {
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          throw new Error(text || `Failed to load exercises (${res.status})`);
-        }
-        return res.json();
-      })
+    listExercises()
       .then((rows) => {
         if (cancelled) return;
 
         const byGroup = {};
         for (const r of rows || []) {
           const group = r.muscle_group || 'Other';
+          const id = r.id;
           const name = r.name;
-          if (!name) continue;
+          if (!id || !name) continue;
           if (!byGroup[group]) byGroup[group] = [];
-          byGroup[group].push(name);
+          byGroup[group].push({ id, name });
         }
 
         // Sort for stable UI.
         for (const g of Object.keys(byGroup)) {
-          byGroup[g].sort((a, b) => a.localeCompare(b));
+          byGroup[g].sort((a, b) => a.name.localeCompare(b.name));
         }
         const groups = Object.keys(byGroup).sort((a, b) => a.localeCompare(b));
 
@@ -64,7 +59,7 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
       .catch((err) => {
         if (cancelled) return;
         setErrorMessage(
-          `Nie udało się pobrać listy ćwiczeń z API. Upewnij się, że backend działa na ${API_BASE_URL}. (${err?.message || 'error'})`
+          `Nie udało się pobrać listy ćwiczeń z API. Upewnij się, że backend działa. (${err?.message || 'error'})`
         );
         setShowErrorAlert(true);
       })
@@ -81,7 +76,7 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
     return selectedMuscleGroup ? exercisesByGroup[selectedMuscleGroup] || [] : [];
   }, [selectedMuscleGroup, exercisesByGroup]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     // Валидация
     if (!selectedMuscleGroup) {
       const errorMsg = 'Wybierz grupę mięśni';
@@ -153,33 +148,74 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
       });
     }
 
-    // Добавление упражнения
-    const newExercise = {
-      id: Date.now(),
-      muscleGroup: selectedMuscleGroup,
-      exercise: isCustomExercise ? customExerciseName : selectedExercise,
-      isCustom: isCustomExercise,
-      weight: weightNum,
-      reps: repsNum,
-      sets: setsNum,
-      series: series,
-      notes: notes.trim()
-    };
-
-    onAdd(newExercise);
-    
-    // Сброс формы
-    setSelectedMuscleGroup('');
-    setSelectedExercise('');
-    setIsCustomExercise(false);
-    setCustomExerciseName('');
-    setWeight('');
-    setReps('');
-    setSets('1');
-    setNotes('');
+    setIsAdding(true);
     setShowErrorAlert(false);
     setErrorMessage('');
-    onClose();
+
+    try {
+      let exerciseId = null;
+      let exerciseName = null;
+
+      if (isCustomExercise) {
+        exerciseName = customExerciseName.trim();
+        try {
+          const created = await createExercise({
+            name: exerciseName,
+            muscle_group: selectedMuscleGroup,
+            note: notes.trim() || null,
+          });
+          exerciseId = created?.id != null ? Number(created.id) : null;
+        } catch (e) {
+          const rows = await listExercises();
+          const found = (rows || []).find(
+            (r) => (r?.name || '').toLowerCase() === exerciseName.toLowerCase()
+          );
+          if (!found?.id) throw e;
+          exerciseId = Number(found.id);
+        }
+      } else {
+        exerciseId = Number(selectedExercise);
+        const exObj = availableExercises.find((e) => String(e.id) === String(selectedExercise));
+        exerciseName = exObj?.name;
+      }
+
+      if (!exerciseId || !exerciseName) {
+        throw new Error('Nie udało się ustalić exercise_id');
+      }
+
+      const newExercise = {
+        id: Date.now(),
+        muscleGroup: selectedMuscleGroup,
+        exerciseId,
+        exercise: exerciseName,
+        isCustom: isCustomExercise,
+        weight: weightNum,
+        reps: repsNum,
+        sets: setsNum,
+        series: series,
+        notes: notes.trim(),
+      };
+
+      onAdd(newExercise);
+
+      setSelectedMuscleGroup('');
+      setSelectedExercise('');
+      setIsCustomExercise(false);
+      setCustomExerciseName('');
+      setWeight('');
+      setReps('');
+      setSets('1');
+      setNotes('');
+      setShowErrorAlert(false);
+      setErrorMessage('');
+      onClose();
+    } catch (e) {
+      const msg = e?.message || 'Failed to add exercise';
+      setErrorMessage(msg);
+      setShowErrorAlert(true);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleCancel = () => {
@@ -252,8 +288,8 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
                 >
                   <option value="">Wybierz ćwiczenie</option>
                   {availableExercises.map((exercise) => (
-                    <option key={exercise} value={exercise}>
-                      {exercise}
+                    <option key={exercise.id} value={exercise.id}>
+                      {exercise.name}
                     </option>
                   ))}
                 </select>
@@ -341,11 +377,11 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
           </div>
 
           <div className="add-exercise-modal-footer">
-            <button className="add-exercise-cancel-btn" onClick={handleCancel}>
+            <button type="button" className="add-exercise-cancel-btn" onClick={handleCancel} disabled={isAdding}>
               Anuluj
             </button>
-            <button className="add-exercise-add-btn" onClick={handleAdd}>
-              Dodaj
+            <button type="button" className="add-exercise-add-btn" onClick={handleAdd} disabled={isAdding}>
+              {isAdding ? 'Dodaj...' : 'Dodaj'}
             </button>
           </div>
         </div>

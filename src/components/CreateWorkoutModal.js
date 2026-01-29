@@ -1,39 +1,88 @@
 import React, { useState } from 'react';
 import AddExerciseModal from './AddExerciseModal';
 import TemplatesModal from './TemplatesModal';
+import ErrorAlert from './ErrorAlert';
+import { createSet, createWorkout } from '../utils/api';
 import '../styles/components/CreateWorkoutModal.css';
 
 const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
   const [exercises, setExercises] = useState([]);
   const [workoutNotes, setWorkoutNotes] = useState('');
+  const [workoutType, setWorkoutType] = useState('Workout');
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleAddExercise = (exercise) => {
-    setExercises([...exercises, exercise]);
+    setExercises((prev) => [...prev, exercise]);
   };
 
   const handleRemoveExercise = (id) => {
     setExercises(exercises.filter(ex => ex.id !== id));
   };
 
-  const handleSaveWorkout = () => {
+  const handleSaveWorkout = async () => {
     if (exercises.length === 0) {
       return;
     }
-    const workout = {
-      exercises: exercises,
-      notes: workoutNotes.trim()
-    };
-    onSave(workout);
-    setExercises([]);
-    setWorkoutNotes('');
-    onClose();
+
+    setIsSaving(true);
+    setShowErrorAlert(false);
+    setErrorMessage('');
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const created = await createWorkout({
+        date: today,
+        type: workoutType || 'Workout',
+        note: workoutNotes.trim() || null,
+      });
+
+      const workoutId = created?.id;
+      if (!workoutId) throw new Error('Backend did not return workout id');
+
+      // Create all sets. We rely on AddExerciseModal to provide exerciseId for non-custom exercises.
+      const setCreates = [];
+      for (const ex of exercises) {
+        if (!ex.exerciseId) {
+          throw new Error(`Missing exerciseId for "${ex.exercise}" (reload exercises list and try again)`);
+        }
+        const series = ex.series && ex.series.length > 0
+          ? ex.series
+          : [{ setNumber: 1, weight: ex.weight, reps: ex.reps }];
+
+        for (const s of series) {
+          setCreates.push(createSet({
+            workout_id: workoutId,
+            exercise_id: ex.exerciseId,
+            weight: Number(s.weight),
+            reps: Number(s.reps),
+            set_number: s.setNumber || null,
+          }));
+        }
+      }
+      await Promise.all(setCreates);
+
+      if (onSave) onSave({ id: workoutId });
+
+      setExercises([]);
+      setWorkoutNotes('');
+      setWorkoutType('Workout');
+      onClose();
+    } catch (e) {
+      setErrorMessage(e?.message || 'Failed to save workout');
+      setShowErrorAlert(true);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClose = () => {
     setExercises([]);
     setWorkoutNotes('');
+    setWorkoutType('Workout');
     onClose();
   };
 
@@ -46,6 +95,15 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
 
   return (
     <>
+      {showErrorAlert && (
+        <ErrorAlert
+          message={errorMessage}
+          onClose={() => {
+            setShowErrorAlert(false);
+            setErrorMessage('');
+          }}
+        />
+      )}
       <div className="modal-overlay" onClick={handleClose}>
         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
           <div className="modal-header">
@@ -59,6 +117,16 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
           </div>
 
           <div className="modal-body">
+            <div className="workout-notes-section">
+              <label className="workout-notes-label">Workout Type</label>
+              <input
+                className="workout-notes-textarea"
+                value={workoutType}
+                onChange={(e) => setWorkoutType(e.target.value)}
+                placeholder="e.g. Push / Pull / Legs"
+              />
+            </div>
+
             {/* Список упражнений */}
             <div className="exercises-list">
               {exercises.length === 0 ? (
@@ -117,7 +185,7 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
           </div>
 
           <div className="modal-footer">
-            <button className="modal-save-btn" onClick={handleSaveWorkout}>
+            <button className="modal-save-btn" onClick={handleSaveWorkout} disabled={isSaving}>
               Zapisz trening
             </button>
           </div>
