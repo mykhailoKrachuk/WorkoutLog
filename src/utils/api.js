@@ -57,11 +57,22 @@ export function deleteWorkout(workoutId) {
   return apiFetch(`/workouts/${workoutId}`, { method: 'DELETE' });
 }
 
-export function getWorkoutsHistory({ limit = 50, includeStats = true } = {}) {
+export async function getWorkoutsHistory({ limit = 50, includeStats = true } = {}) {
   const qs = new URLSearchParams();
   if (limit) qs.set('limit', String(limit));
   qs.set('include_stats', includeStats ? 'true' : 'false');
-  return apiFetch(`/workouts/history?${qs.toString()}`);
+  const data = await apiFetch(`/workouts/history?${qs.toString()}`);
+
+  // Backend может вернуть либо массив тренировок, либо объект { workouts, summary }
+  if (Array.isArray(data)) {
+    return { workouts: data };
+  }
+
+  if (data && Array.isArray(data.workouts)) {
+    return data;
+  }
+
+  return { workouts: [] };
 }
 
 export function getWorkout(workoutId) {

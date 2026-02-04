@@ -6,19 +6,27 @@ import CreateWorkoutModal from './CreateWorkoutModal';
 import '../styles/components/MainScreen.css';
 
 const MainScreen = () => {
-  const userName = 'Użytkownik';
+  const userName = 'User';
   const [isModalOpen, setIsModalOpen] = useState(false);
   const workoutHistoryRef = useRef(null);
+  const recordsRef = useRef(null);
+  const statisticsRef = useRef(null);
 
   const handleAddWorkout = () => {
     setIsModalOpen(true);
   };
 
   const handleSaveWorkout = (workout) => {
-    // Reload workout history after a short delay to ensure state updates
+    // Reload data after a short delay to ensure backend has committed everything
     setTimeout(() => {
       if (workoutHistoryRef.current) {
         workoutHistoryRef.current.reload();
+      }
+      if (recordsRef.current) {
+        recordsRef.current.reload();
+      }
+      if (statisticsRef.current) {
+        statisticsRef.current.reload();
       }
     }, 100);
   };
@@ -36,23 +44,23 @@ const MainScreen = () => {
         <div className="content-row">
           <div className="content-block">
             <h2 className="block-title">Records</h2>
-            <Records />
+            <Records ref={recordsRef} />
           </div>
           <div className="content-block">
-            <h2 className="block-title">Historia treningów</h2>
+            <h2 className="block-title">Workout History</h2>
             <WorkoutHistory ref={workoutHistoryRef} />
           </div>
         </div>
         <div className="content-row">
           <div className="content-block full-width">
-            <h2 className="block-title">Statystyki</h2>
-            <Statistics />
+            <h2 className="block-title">Statistics</h2>
+            <Statistics ref={statisticsRef} />
           </div>
         </div>
       </div>
 
       {/* Floating Action Button */}
-      <button className="fab" onClick={handleAddWorkout} aria-label="Dodaj trening">
+      <button className="fab" onClick={handleAddWorkout} aria-label="Add workout">
         <span className="fab-icon">+</span>
       </button>
 

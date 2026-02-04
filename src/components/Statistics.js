@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef, useState } from 'react';
 import { getWorkoutsHistory } from '../utils/api';
 import '../styles/components/Statistics.css';
 
-const Statistics = () => {
+const Statistics = forwardRef((props, ref) => {
   const [stats, setStats] = useState([
-    { label: 'Wszystkie treningi', value: '—' },
-    { label: 'Treningi w tym miesiącu', value: '—' },
-    { label: 'Wszystkie sety', value: '—' },
-    { label: 'Średni volume / trening', value: '—' },
+    { label: 'All workouts', value: '—' },
+    { label: 'Workouts this month', value: '—' },
+    { label: 'All sets', value: '—' },
+    { label: 'Avg volume / workout', value: '—' },
   ]);
 
-  useEffect(() => {
+  const loadStats = () => {
     let cancelled = false;
 
     getWorkoutsHistory({ limit: 200, includeStats: true })
@@ -23,11 +23,53 @@ const Statistics = () => {
         const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const workoutsThisMonth = workouts.filter((w) => (w.date || '').startsWith(thisMonth)).length;
 
+        // Общее количество тренировок
+        const totalWorkouts =
+          typeof summary.total_workouts === 'number'
+            ? summary.total_workouts
+            : workouts.length;
+
+        // Общее количество сетов: если backend не вернул summary,
+        // считаем на фронте из statistics.sets_count или sets_count.
+        const totalSets =
+          typeof summary.total_sets === 'number'
+            ? summary.total_sets
+            : workouts.reduce((acc, w) => {
+                const perWorkoutSets =
+                  (w.statistics && typeof w.statistics.sets_count === 'number'
+                    ? w.statistics.sets_count
+                    : typeof w.sets_count === 'number'
+                    ? w.sets_count
+                    : 0);
+                return acc + perWorkoutSets;
+              }, 0);
+
+        // Средний volume / тренировку: если нет summary, считаем по total_volume
+        let avgVolumePerWorkout =
+          typeof summary.avg_volume_per_workout === 'number'
+            ? summary.avg_volume_per_workout
+            : (() => {
+                if (!workouts.length) return 0;
+                const totalVolume = workouts.reduce((acc, w) => {
+                  const vol =
+                    (w.statistics && typeof w.statistics.total_volume === 'number'
+                      ? w.statistics.total_volume
+                      : typeof w.total_volume === 'number'
+                      ? w.total_volume
+                      : 0);
+                  return acc + vol;
+                }, 0);
+                return totalVolume / workouts.length || 0;
+              })();
+
+        // Немного округлим volume для красивого вывода
+        avgVolumePerWorkout = Math.round(avgVolumePerWorkout * 10) / 10;
+
         setStats([
-          { label: 'Wszystkie treningi', value: String(summary.total_workouts ?? workouts.length ?? 0) },
-          { label: 'Treningi w tym miesiącu', value: String(workoutsThisMonth) },
-          { label: 'Wszystkie sety', value: String(summary.total_sets ?? '0') },
-          { label: 'Średni volume / trening', value: String(summary.avg_volume_per_workout ?? '0') },
+          { label: 'All workouts', value: String(totalWorkouts) },
+          { label: 'Workouts this month', value: String(workoutsThisMonth) },
+          { label: 'All sets', value: String(totalSets) },
+          { label: 'Avg volume / workout', value: String(avgVolumePerWorkout) },
         ]);
       })
       .catch((e) => {
@@ -37,7 +79,16 @@ const Statistics = () => {
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    const cancel = loadStats();
+    return cancel;
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    reload: () => loadStats(),
+  }));
 
   return (
     <div className="statistics">
@@ -51,7 +102,7 @@ const Statistics = () => {
       </div>
     </div>
   );
-};
+});
 
 export default Statistics;
 

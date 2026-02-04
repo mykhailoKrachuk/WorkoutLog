@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MainScreen from './components/MainScreen';
-import CreateWorkoutScreen from './components/CreateWorkoutScreen';
 import './styles/App.css';
 
 function App() {
@@ -10,7 +9,6 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<MainScreen />} />
-          <Route path="/create-workout" element={<CreateWorkoutScreen />} />
         </Routes>
       </div>
     </Router>

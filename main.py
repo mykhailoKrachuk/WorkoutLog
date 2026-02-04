@@ -5,9 +5,8 @@ from typing import Optional
 import sqlite3
 from db import init_db, seed_exercises, get_conn
 
-app = FastAPI(title="Workout App", description="API для отслеживания тренировок")
+app = FastAPI(title="Workout App", description="API for tracking workouts")
 
-# Allow local React dev server (http://localhost:3000) to call this API.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -56,7 +55,6 @@ class SetUpdate(BaseModel):
 
 
 class BulkSetUpdate(BaseModel):
-    """Модель для масового оновлення підходів"""
     set_id: int
     exercise_id: Optional[int] = None
     weight: Optional[float] = Field(default=None, ge=0)
@@ -65,7 +63,6 @@ class BulkSetUpdate(BaseModel):
 
 
 class WorkoutWithSetsUpdate(BaseModel):
-    """Модель для оновлення тренування разом з підходами"""
     date: Optional[NonEmptyStr] = None
     type: Optional[NonEmptyStr] = None
     note: Optional[NonEmptyStr] = None
@@ -133,11 +130,10 @@ class WorkoutListItem(BaseModel):
     template_name: Optional[str] = None
     sets_count: int
     exercises_count: int
-    total_volume: float  # загальний об'єм (вага * повтори)
+    total_volume: float
 
 
 class ExerciseRecord(BaseModel):
-    """Модель для рекордів по вправі"""
     exercise_id: int
     exercise_name: str
     muscle_group: str
@@ -148,7 +144,7 @@ class ExerciseRecord(BaseModel):
     max_reps_date: Optional[str] = None
     max_reps_workout_id: Optional[int] = None
     max_reps_weight: Optional[float] = None
-    max_volume: Optional[float] = None  # максимальний об'єм (вага * повтори)
+    max_volume: Optional[float] = None
     max_volume_date: Optional[str] = None
     max_volume_workout_id: Optional[int] = None
     total_sets: int
@@ -183,7 +179,7 @@ async def create_exercise(exercise: ExerciseCreate):
             exercise_id = cursor.lastrowid
         return {"id": exercise_id}
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=400, detail="Упражнение с таким названием уже существует")
+        raise HTTPException(status_code=400, detail="Exercise with this name already exists")
 
 
 @app.patch("/exercises/{exercise_id}")
@@ -194,13 +190,13 @@ async def update_exercise(exercise_id: int, payload: ExerciseUpdate):
     with get_conn() as conn:
         existing = conn.execute("SELECT id FROM Exercises WHERE id = ?", (exercise_id,)).fetchone()
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Упражнение с id={exercise_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Exercise with id={exercise_id} not found")
 
         if payload.name is not None:
             try:
                 conn.execute("UPDATE Exercises SET name = ? WHERE id = ?", (payload.name, exercise_id))
             except sqlite3.IntegrityError:
-                raise HTTPException(status_code=400, detail="Упражнение с таким названием уже существует")
+                raise HTTPException(status_code=400, detail="Exercise with this name already exists")
 
         if payload.muscle_group is not None:
             conn.execute("UPDATE Exercises SET muscle_group = ? WHERE id = ?", (payload.muscle_group, exercise_id))
@@ -218,14 +214,11 @@ async def update_exercise(exercise_id: int, payload: ExerciseUpdate):
 
 @app.delete("/exercises/{exercise_id}", status_code=204)
 async def delete_exercise(exercise_id: int):
-    """Видаляє вправу"""
     with get_conn() as conn:
-        # Перевіряємо чи існує вправа
         existing = conn.execute("SELECT id FROM Exercises WHERE id = ?", (exercise_id,)).fetchone()
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Упражнение с id={exercise_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Exercise with id={exercise_id} not found")
         
-        # Перевіряємо чи використовується вправа в сетах
         sets_count = conn.execute(
             "SELECT COUNT(*) as count FROM Sets WHERE exercise_id = ?", 
             (exercise_id,)
@@ -233,11 +226,10 @@ async def delete_exercise(exercise_id: int):
         
         if sets_count > 0:
             raise HTTPException(
-                status_code=400, 
-                detail=f"Неможливо видалити вправу: вона використовується в {sets_count} підходах. Спочатку видаліть всі підходи з цією вправою."
+                status_code=400,
+                detail=f"Cannot delete exercise: it is used in {sets_count} sets. Remove all sets with this exercise first."
             )
         
-        # Перевіряємо чи використовується в шаблонах
         template_sets_count = conn.execute(
             "SELECT COUNT(*) as count FROM TemplateSets WHERE exercise_id = ?", 
             (exercise_id,)
@@ -245,11 +237,10 @@ async def delete_exercise(exercise_id: int):
         
         if template_sets_count > 0:
             raise HTTPException(
-                status_code=400, 
-                detail=f"Неможливо видалити вправу: вона використовується в {template_sets_count} шаблонах. Спочатку видаліть вправу з шаблонів."
+                status_code=400,
+                detail=f"Cannot delete exercise: it is used in {template_sets_count} templates. Remove this exercise from templates first."
             )
         
-        # Видаляємо вправу
         cur = conn.execute("DELETE FROM Exercises WHERE id = ?", (exercise_id,))
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Exercise not found")
@@ -259,7 +250,6 @@ async def delete_exercise(exercise_id: int):
 
 @app.get("/sets/{set_id}")
 async def get_set(set_id: int):
-    """Отримує інформацію про один підхід (set)"""
     with get_conn() as conn:
         set_data = conn.execute("""
             SELECT s.id, s.workout_id, s.exercise_id, e.name as exercise_name,
@@ -270,7 +260,7 @@ async def get_set(set_id: int):
         """, (set_id,)).fetchone()
         
         if not set_data:
-            raise HTTPException(status_code=404, detail=f"Підхід с id={set_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Set with id={set_id} not found")
     
     return dict(set_data)
 
@@ -280,11 +270,11 @@ async def create_set(set_data: SetCreate):
     with get_conn() as conn:
         workout = conn.execute("SELECT id FROM Workouts WHERE id = ?", (set_data.workout_id,)).fetchone()
         if not workout:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={set_data.workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={set_data.workout_id} not found")
 
         exercise = conn.execute("SELECT id FROM Exercises WHERE id = ?", (set_data.exercise_id,)).fetchone()
         if not exercise:
-            raise HTTPException(status_code=404, detail=f"Упражнение с id={set_data.exercise_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Exercise with id={set_data.exercise_id} not found")
 
         cursor = conn.execute(
             """INSERT INTO Sets (workout_id, exercise_id, weight, reps, set_number)
@@ -298,23 +288,19 @@ async def create_set(set_data: SetCreate):
 
 @app.patch("/sets/{set_id}")
 async def update_set(set_id: int, payload: SetUpdate):
-    """Редагує підхід (set) в тренуванні"""
     if payload.exercise_id is None and payload.weight is None and payload.reps is None and payload.set_number is None:
         raise HTTPException(status_code=400, detail="Nothing to update")
 
     with get_conn() as conn:
-        # Перевіряємо чи існує set
         existing = conn.execute("SELECT id, workout_id FROM Sets WHERE id = ?", (set_id,)).fetchone()
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Підхід с id={set_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Set with id={set_id} not found")
 
-        # Перевіряємо чи існує вправа, якщо змінюється
         if payload.exercise_id is not None:
             exercise = conn.execute("SELECT id FROM Exercises WHERE id = ?", (payload.exercise_id,)).fetchone()
             if not exercise:
-                raise HTTPException(status_code=404, detail=f"Упражнение с id={payload.exercise_id} не найдено")
+                raise HTTPException(status_code=404, detail=f"Exercise with id={payload.exercise_id} not found")
 
-        # Оновлюємо поля
         if payload.exercise_id is not None:
             conn.execute("UPDATE Sets SET exercise_id = ? WHERE id = ?", (payload.exercise_id, set_id))
         
@@ -327,7 +313,6 @@ async def update_set(set_id: int, payload: SetUpdate):
         if payload.set_number is not None:
             conn.execute("UPDATE Sets SET set_number = ? WHERE id = ?", (payload.set_number, set_id))
 
-        # Повертаємо оновлений set з інформацією про вправу
         updated = conn.execute("""
             SELECT s.id, s.workout_id, s.exercise_id, e.name as exercise_name,
                    e.muscle_group, s.weight, s.reps, s.set_number
@@ -341,30 +326,26 @@ async def update_set(set_id: int, payload: SetUpdate):
 
 @app.delete("/sets/{set_id}", status_code=204)
 async def delete_set(set_id: int):
-    """Видаляє підхід (set) з тренування"""
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM Sets WHERE id = ?", (set_id,))
         if cur.rowcount == 0:
-            raise HTTPException(status_code=404, detail=f"Підхід с id={set_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Set with id={set_id} not found")
     return None
 
 
 @app.put("/workouts/{workout_id}/sets", status_code=200)
 async def bulk_update_workout_sets(workout_id: int, sets: list[BulkSetUpdate]):
-    """Масове оновлення підходів тренування з історії"""
     if not sets:
-        raise HTTPException(status_code=400, detail="Список підходів не може бути порожнім")
+        raise HTTPException(status_code=400, detail="Sets list cannot be empty")
     
     with get_conn() as conn:
-        # Перевіряємо чи існує тренування
         workout = conn.execute("SELECT id FROM Workouts WHERE id = ?", (workout_id,)).fetchone()
         if not workout:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={workout_id} not found")
         
         updated_sets = []
         
         for set_update in sets:
-            # Перевіряємо чи належить set цьому тренуванню
             existing = conn.execute(
                 "SELECT id, workout_id FROM Sets WHERE id = ? AND workout_id = ?",
                 (set_update.set_id, workout_id)
@@ -373,10 +354,9 @@ async def bulk_update_workout_sets(workout_id: int, sets: list[BulkSetUpdate]):
             if not existing:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Підхід с id={set_update.set_id} не найдено або не належить цьому тренуванню"
+                    detail=f"Set with id={set_update.set_id} not found or does not belong to this workout"
                 )
             
-            # Перевіряємо вправу, якщо змінюється
             if set_update.exercise_id is not None:
                 exercise = conn.execute(
                     "SELECT id FROM Exercises WHERE id = ?", 
@@ -385,10 +365,9 @@ async def bulk_update_workout_sets(workout_id: int, sets: list[BulkSetUpdate]):
                 if not exercise:
                     raise HTTPException(
                         status_code=404,
-                        detail=f"Упражнение с id={set_update.exercise_id} не найдено"
+                        detail=f"Exercise with id={set_update.exercise_id} not found"
                     )
             
-            # Оновлюємо поля
             updates = []
             params = []
             
@@ -415,7 +394,6 @@ async def bulk_update_workout_sets(workout_id: int, sets: list[BulkSetUpdate]):
                     params
                 )
             
-            # Отримуємо оновлений set
             updated = conn.execute("""
                 SELECT s.id, s.workout_id, s.exercise_id, e.name as exercise_name,
                        e.muscle_group, s.weight, s.reps, s.set_number
@@ -426,7 +404,6 @@ async def bulk_update_workout_sets(workout_id: int, sets: list[BulkSetUpdate]):
             
             updated_sets.append(dict(updated))
         
-        # Повертаємо повне оновлене тренування
         workout_full = conn.execute(
             """SELECT w.id, w.date, w.type, w.note, w.template_id, 
                       t.name as template_name
@@ -459,14 +436,13 @@ async def root():
 
 @app.get("/workouts/history")
 async def get_workout_history(
-    type: Optional[str] = Query(None, description="Фільтр за типом тренування"),
-    date_from: Optional[str] = Query(None, description="Фільтр від дати (формат: YYYY-MM-DD)"),
-    date_to: Optional[str] = Query(None, description="Фільтр до дати (формат: YYYY-MM-DD)"),
-    template_id: Optional[int] = Query(None, description="Фільтр за шаблоном"),
-    limit: Optional[int] = Query(None, ge=1, le=1000, description="Ліміт кількості результатів"),
-    include_stats: bool = Query(True, description="Включити загальну статистику")
+    type: Optional[str] = Query(None, description="Filter by workout type"),
+    date_from: Optional[str] = Query(None, description="Filter from date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)"),
+    template_id: Optional[int] = Query(None, description="Filter by template id"),
+    limit: Optional[int] = Query(None, ge=1, le=1000, description="Maximum number of results"),
+    include_stats: bool = Query(True, description="Include overall statistics in response")
 ):
-    """Отримує розширену історію тренувань з детальною інформацією та статистикою"""
     with get_conn() as conn:
         query = """
             SELECT w.id, w.date, w.type, w.note, w.template_id, 
@@ -501,7 +477,6 @@ async def get_workout_history(
         
         rows = conn.execute(query, params).fetchall()
         
-        # Додаємо статистику для кожного тренування
         result = []
         for row in rows:
             stats = conn.execute("""
@@ -530,14 +505,13 @@ async def get_workout_history(
 
 @app.patch("/workouts/{workout_id}")
 async def update_workout(workout_id: int, payload: WorkoutUpdate):
-    """Редагує тренування"""
     if payload.date is None and payload.type is None and payload.note is None:
         raise HTTPException(status_code=400, detail="Nothing to update")
 
     with get_conn() as conn:
         existing = conn.execute("SELECT id FROM Workouts WHERE id = ?", (workout_id,)).fetchone()
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={workout_id} not found")
 
         if payload.date is not None:
             conn.execute("UPDATE Workouts SET date = ? WHERE id = ?", (payload.date, workout_id))
@@ -546,7 +520,6 @@ async def update_workout(workout_id: int, payload: WorkoutUpdate):
         if payload.note is not None:
             conn.execute("UPDATE Workouts SET note = ? WHERE id = ?", (payload.note, workout_id))
 
-        # Повертаємо оновлене тренування з інформацією про шаблон
         updated = conn.execute(
             """SELECT w.id, w.date, w.type, w.note, w.template_id, 
                       t.name as template_name
@@ -561,13 +534,11 @@ async def update_workout(workout_id: int, payload: WorkoutUpdate):
 
 @app.put("/workouts/{workout_id}/full", status_code=200)
 async def update_workout_full(workout_id: int, payload: WorkoutWithSetsUpdate):
-    """Оновлює тренування разом з підходами - для зручного редагування з історії"""
     with get_conn() as conn:
         existing = conn.execute("SELECT id FROM Workouts WHERE id = ?", (workout_id,)).fetchone()
         if not existing:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={workout_id} not found")
 
-        # Оновлюємо дані тренування
         if payload.date is not None:
             conn.execute("UPDATE Workouts SET date = ? WHERE id = ?", (payload.date, workout_id))
         if payload.type is not None:
@@ -575,10 +546,8 @@ async def update_workout_full(workout_id: int, payload: WorkoutWithSetsUpdate):
         if payload.note is not None:
             conn.execute("UPDATE Workouts SET note = ? WHERE id = ?", (payload.note, workout_id))
 
-        # Оновлюємо підходи, якщо вони передані
         if payload.sets is not None:
             for set_update in payload.sets:
-                # Перевіряємо чи належить set цьому тренуванню
                 existing_set = conn.execute(
                     "SELECT id, workout_id FROM Sets WHERE id = ? AND workout_id = ?",
                     (set_update.set_id, workout_id)
@@ -587,10 +556,9 @@ async def update_workout_full(workout_id: int, payload: WorkoutWithSetsUpdate):
                 if not existing_set:
                     raise HTTPException(
                         status_code=404,
-                        detail=f"Підхід с id={set_update.set_id} не найдено або не належить цьому тренуванню"
+                        detail=f"Set with id={set_update.set_id} not found or does not belong to this workout"
                     )
                 
-                # Перевіряємо вправу, якщо змінюється
                 if set_update.exercise_id is not None:
                     exercise = conn.execute(
                         "SELECT id FROM Exercises WHERE id = ?",
@@ -599,10 +567,9 @@ async def update_workout_full(workout_id: int, payload: WorkoutWithSetsUpdate):
                     if not exercise:
                         raise HTTPException(
                             status_code=404,
-                            detail=f"Упражнение с id={set_update.exercise_id} не найдено"
+                            detail=f"Exercise with id={set_update.exercise_id} not found"
                         )
                 
-                # Оновлюємо поля
                 updates = []
                 params = []
                 
@@ -629,7 +596,6 @@ async def update_workout_full(workout_id: int, payload: WorkoutWithSetsUpdate):
                         params
                     )
 
-        # Повертаємо повне оновлене тренування з усіма підходами
         workout = conn.execute(
             """SELECT w.id, w.date, w.type, w.note, w.template_id, 
                       t.name as template_name
@@ -682,16 +648,14 @@ async def delete_workout(workout_id: int):
 
 @app.get("/workouts/history")
 async def get_workout_history(
-    type: Optional[str] = Query(None, description="Фільтр за типом тренування"),
-    date_from: Optional[str] = Query(None, description="Фільтр від дати (формат: YYYY-MM-DD)"),
-    date_to: Optional[str] = Query(None, description="Фільтр до дати (формат: YYYY-MM-DD)"),
-    template_id: Optional[int] = Query(None, description="Фільтр за шаблоном"),
-    limit: Optional[int] = Query(None, ge=1, le=1000, description="Ліміт кількості результатів"),
-    include_stats: bool = Query(True, description="Включити загальну статистику")
+    type: Optional[str] = Query(None, description="Filter by workout type"),
+    date_from: Optional[str] = Query(None, description="Filter from date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="Filter to date (YYYY-MM-DD)"),
+    template_id: Optional[int] = Query(None, description="Filter by template id"),
+    limit: Optional[int] = Query(None, ge=1, le=1000, description="Maximum number of results"),
+    include_stats: bool = Query(True, description="Include overall statistics in response")
 ):
-    """Отримує розширену історію тренувань з детальною інформацією та статистикою"""
     with get_conn() as conn:
-        # Базовий запит для тренувань
         query = """
             SELECT w.id, w.date, w.type, w.note, w.template_id, 
                    t.name as template_name
@@ -725,10 +689,8 @@ async def get_workout_history(
         
         rows = conn.execute(query, params).fetchall()
         
-        # Формуємо детальну історію
         history = []
         for row in rows:
-            # Статистика по тренуванню
             stats = conn.execute("""
                 SELECT 
                     COUNT(DISTINCT s.exercise_id) as exercises_count,
@@ -740,7 +702,6 @@ async def get_workout_history(
                 WHERE s.workout_id = ?
             """, (row["id"],)).fetchone()
             
-            # Список вправ у тренуванні
             exercises = conn.execute("""
                 SELECT DISTINCT e.id, e.name, e.muscle_group
                 FROM Sets s
@@ -749,7 +710,6 @@ async def get_workout_history(
                 ORDER BY e.muscle_group, e.name
             """, (row["id"],)).fetchall()
             
-            # Повна інформація про всі підходи (sets) для редагування
             sets = conn.execute("""
                 SELECT s.id, s.workout_id, s.exercise_id, e.name as exercise_name,
                        e.muscle_group, s.weight, s.reps, s.set_number
@@ -759,7 +719,6 @@ async def get_workout_history(
                 ORDER BY s.set_number, s.id
             """, (row["id"],)).fetchall()
             
-            # Перевіряємо чи були встановлені рекорди в цьому тренуванні
             records_achieved = []
             for s in sets:
                 exercise_id = s["exercise_id"]
@@ -767,7 +726,6 @@ async def get_workout_history(
                 reps = s["reps"]
                 volume = weight * reps
                 
-                # Перевіряємо максимальну вагу до цього тренування
                 max_weight_before = conn.execute("""
                     SELECT MAX(weight) as max_weight
                     FROM Sets
@@ -776,7 +734,6 @@ async def get_workout_history(
                 
                 max_weight_before_value = max_weight_before["max_weight"] if max_weight_before and max_weight_before["max_weight"] else 0
                 
-                # Перевіряємо максимальну кількість повторень до цього тренування
                 max_reps_before = conn.execute("""
                     SELECT MAX(reps) as max_reps
                     FROM Sets
@@ -785,7 +742,6 @@ async def get_workout_history(
                 
                 max_reps_before_value = max_reps_before["max_reps"] if max_reps_before and max_reps_before["max_reps"] else 0
                 
-                # Перевіряємо максимальний об'єм до цього тренування
                 max_volume_before = conn.execute("""
                     SELECT MAX(weight * reps) as max_volume
                     FROM Sets
@@ -794,7 +750,6 @@ async def get_workout_history(
                 
                 max_volume_before_value = max_volume_before["max_volume"] if max_volume_before and max_volume_before["max_volume"] else 0
                 
-                # Визначаємо які рекорди були встановлені
                 record_types = []
                 if weight > max_weight_before_value:
                     record_types.append("max_weight")
@@ -846,11 +801,9 @@ async def get_workout_history(
             }
             history.append(workout_data)
         
-        # Загальна статистика, якщо потрібна
         response = {"workouts": history}
         
         if include_stats and rows:
-            # Побудова запиту для загальної статистики з тими ж фільтрами
             stats_query = """
                 SELECT 
                     COUNT(DISTINCT w.id) as total_workouts,
@@ -911,7 +864,7 @@ async def get_workout(workout_id: int):
         ).fetchone()
 
         if not workout:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={workout_id} not found")
 
         sets = conn.execute(
             """SELECT s.id, s.workout_id, s.exercise_id, e.name as exercise_name,
@@ -964,36 +917,31 @@ async def list_exercises(muscle_group: str | None = None):
 @app.post("/workouts/{workout_id}/create-template", status_code=201)
 async def create_template_from_workout(
     workout_id: int, 
-    template_name: str = Query(..., min_length=1, description="Назва шаблону")
+    template_name: str = Query(..., min_length=1, description="Template name")
 ):
-    """Створює шаблон тренування з існуючого тренування"""
     with get_conn() as conn:
-        # Перевіряємо чи існує тренування
         workout = conn.execute(
             "SELECT id, type, note FROM Workouts WHERE id = ?",
             (workout_id,)
         ).fetchone()
         
         if not workout:
-            raise HTTPException(status_code=404, detail=f"Тренировка с id={workout_id} не найдена")
+            raise HTTPException(status_code=404, detail=f"Workout with id={workout_id} not found")
         
-        # Отримуємо всі сети цього тренування
         sets = conn.execute(
             "SELECT exercise_id, weight, reps, set_number FROM Sets WHERE workout_id = ?",
             (workout_id,)
         ).fetchall()
         
         if not sets:
-            raise HTTPException(status_code=400, detail="Тренировка не содержит сетов")
+            raise HTTPException(status_code=400, detail="Workout does not contain any sets")
         
-        # Створюємо шаблон
         cursor = conn.execute(
             "INSERT INTO Templates (name, type, note) VALUES (?, ?, ?)",
             (template_name, workout["type"], workout["note"])
         )
         template_id = cursor.lastrowid
         
-        # Копіюємо сети в шаблон
         template_sets_data = [
             (template_id, s["exercise_id"], s["weight"], s["reps"], s["set_number"])
             for s in sets
@@ -1004,12 +952,11 @@ async def create_template_from_workout(
             template_sets_data
         )
     
-    return {"id": template_id, "message": f"Шаблон '{template_name}' успешно создан из тренировки {workout_id}"}
+    return {"id": template_id, "message": f"Template '{template_name}' was successfully created from workout {workout_id}"}
 
 
 @app.get("/templates")
 async def list_templates():
-    """Отримує список всіх шаблонів"""
     with get_conn() as conn:
         rows = conn.execute(
             "SELECT id, name, type, note FROM Templates ORDER BY id DESC"
@@ -1019,7 +966,6 @@ async def list_templates():
 
 @app.get("/templates/{template_id}", response_model=TemplateResponse)
 async def get_template(template_id: int):
-    """Отримує шаблон з усіма деталями"""
     with get_conn() as conn:
         template = conn.execute(
             "SELECT id, name, type, note FROM Templates WHERE id = ?",
@@ -1027,7 +973,7 @@ async def get_template(template_id: int):
         ).fetchone()
         
         if not template:
-            raise HTTPException(status_code=404, detail=f"Шаблон с id={template_id} не найден")
+            raise HTTPException(status_code=404, detail=f"Template with id={template_id} not found")
         
         sets = conn.execute(
             """SELECT ts.id, ts.template_id, ts.exercise_id, e.name as exercise_name,
@@ -1063,36 +1009,31 @@ async def get_template(template_id: int):
 @app.post("/templates/{template_id}/create-workout", status_code=201)
 async def create_workout_from_template(
     template_id: int, 
-    date: str = Query(..., min_length=1, description="Дата тренування")
+    date: str = Query(..., min_length=1, description="Workout date")
 ):
-    """Створює нове тренування з шаблону"""
     with get_conn() as conn:
-        # Перевіряємо чи існує шаблон
         template = conn.execute(
             "SELECT id, type, note FROM Templates WHERE id = ?",
             (template_id,)
         ).fetchone()
         
         if not template:
-            raise HTTPException(status_code=404, detail=f"Шаблон с id={template_id} не найден")
+            raise HTTPException(status_code=404, detail=f"Template with id={template_id} not found")
         
-        # Отримуємо всі сети шаблону
         template_sets = conn.execute(
             "SELECT exercise_id, weight, reps, set_number FROM TemplateSets WHERE template_id = ?",
             (template_id,)
         ).fetchall()
         
         if not template_sets:
-            raise HTTPException(status_code=400, detail="Шаблон не содержит сетов")
+            raise HTTPException(status_code=400, detail="Template does not contain any sets")
         
-        # Створюємо нове тренування з посиланням на шаблон
         cursor = conn.execute(
             "INSERT INTO Workouts (date, type, note, template_id) VALUES (?, ?, ?, ?)",
             (date, template["type"], template["note"], template_id)
         )
         workout_id = cursor.lastrowid
         
-        # Копіюємо сети з шаблону в тренування
         workout_sets_data = [
             (workout_id, ts["exercise_id"], ts["weight"], ts["reps"], ts["set_number"])
             for ts in template_sets
@@ -1103,12 +1044,11 @@ async def create_workout_from_template(
             workout_sets_data
         )
     
-    return {"id": workout_id, "message": f"Тренировка создана из шаблона '{template['type']}'"}
+    return {"id": workout_id, "message": f"Workout created from template '{template['type']}'"}
 
 
 @app.delete("/templates/{template_id}", status_code=204)
 async def delete_template(template_id: int):
-    """Видаляє шаблон"""
     with get_conn() as conn:
         cur = conn.execute("DELETE FROM Templates WHERE id = ?", (template_id,))
         if cur.rowcount == 0:
@@ -1118,11 +1058,9 @@ async def delete_template(template_id: int):
 
 @app.get("/records")
 async def get_all_records(
-    sort_by: Optional[str] = Query("name", description="Сортування: name, max_weight, max_reps, max_volume, muscle_group")
+    sort_by: Optional[str] = Query("name", description="Sort by: name, max_weight, max_reps, max_volume, muscle_group")
 ):
-    """Отримує всі рекорди користувача по всіх вправах з можливістю сортування"""
     with get_conn() as conn:
-        # Отримуємо всі вправи
         exercises = conn.execute("""
             SELECT id, name, muscle_group
             FROM Exercises
@@ -1133,7 +1071,6 @@ async def get_all_records(
         for exercise in exercises:
             exercise_id = exercise["id"]
             
-            # Максимальна вага
             max_weight_data = conn.execute("""
                 SELECT s.weight, w.date, w.id as workout_id
                 FROM Sets s
@@ -1143,7 +1080,6 @@ async def get_all_records(
                 LIMIT 1
             """, (exercise_id,)).fetchone()
             
-            # Максимальна кількість повторень
             max_reps_data = conn.execute("""
                 SELECT s.reps, s.weight, w.date, w.id as workout_id
                 FROM Sets s
@@ -1153,7 +1089,6 @@ async def get_all_records(
                 LIMIT 1
             """, (exercise_id,)).fetchone()
             
-            # Максимальний об'єм (вага * повтори)
             max_volume_data = conn.execute("""
                 SELECT s.weight * s.reps as volume, s.weight, s.reps, w.date, w.id as workout_id
                 FROM Sets s
@@ -1163,7 +1098,6 @@ async def get_all_records(
                 LIMIT 1
             """, (exercise_id,)).fetchone()
             
-            # Загальна статистика
             stats = conn.execute("""
                 SELECT 
                     COUNT(s.id) as total_sets,
@@ -1190,11 +1124,9 @@ async def get_all_records(
                 total_workouts=stats["total_workouts"] or 0
             )
             
-            # Додаємо тільки якщо є хоча б один рекорд
             if record.max_weight is not None or record.max_reps is not None or record.max_volume is not None:
                 records.append(record)
         
-        # Сортування рекордів
         if sort_by == "max_weight":
             records.sort(key=lambda x: x.max_weight if x.max_weight else 0, reverse=True)
         elif sort_by == "max_reps":
@@ -1203,7 +1135,7 @@ async def get_all_records(
             records.sort(key=lambda x: x.max_volume if x.max_volume else 0, reverse=True)
         elif sort_by == "muscle_group":
             records.sort(key=lambda x: (x.muscle_group, x.exercise_name))
-        else:  # sort_by == "name" (за замовчуванням)
+        else:  
             records.sort(key=lambda x: x.exercise_name)
     
     return {
@@ -1215,18 +1147,15 @@ async def get_all_records(
 
 @app.get("/records/{exercise_id}")
 async def get_exercise_record(exercise_id: int):
-    """Отримує рекорди по конкретній вправі"""
     with get_conn() as conn:
-        # Перевіряємо чи існує вправа
         exercise = conn.execute(
             "SELECT id, name, muscle_group FROM Exercises WHERE id = ?",
             (exercise_id,)
         ).fetchone()
         
         if not exercise:
-            raise HTTPException(status_code=404, detail=f"Упражнение с id={exercise_id} не найдено")
+            raise HTTPException(status_code=404, detail=f"Exercise with id={exercise_id} not found")
         
-        # Максимальна вага
         max_weight_data = conn.execute("""
             SELECT s.weight, w.date, w.id as workout_id
             FROM Sets s
@@ -1236,7 +1165,6 @@ async def get_exercise_record(exercise_id: int):
             LIMIT 1
         """, (exercise_id,)).fetchone()
         
-        # Максимальна кількість повторень
         max_reps_data = conn.execute("""
             SELECT s.reps, s.weight, w.date, w.id as workout_id
             FROM Sets s
@@ -1246,7 +1174,6 @@ async def get_exercise_record(exercise_id: int):
             LIMIT 1
         """, (exercise_id,)).fetchone()
         
-        # Максимальний об'єм (вага * повтори)
         max_volume_data = conn.execute("""
             SELECT s.weight * s.reps as volume, s.weight, s.reps, w.date, w.id as workout_id
             FROM Sets s
@@ -1256,7 +1183,6 @@ async def get_exercise_record(exercise_id: int):
             LIMIT 1
         """, (exercise_id,)).fetchone()
         
-        # Загальна статистика
         stats = conn.execute("""
             SELECT 
                 COUNT(s.id) as total_sets,
@@ -1270,7 +1196,6 @@ async def get_exercise_record(exercise_id: int):
             WHERE s.exercise_id = ?
         """, (exercise_id,)).fetchone()
         
-        # Історія рекордів (топ 10 найкращих результатів)
         top_weight = conn.execute("""
             SELECT s.weight, s.reps, w.date, w.id as workout_id
             FROM Sets s

@@ -18,13 +18,32 @@ const WorkoutHistory = forwardRef((props, ref) => {
   const loadWorkouts = async () => {
     try {
       const data = await getWorkoutsHistory({ limit: 50, includeStats: false });
-      const list = (data?.workouts || []).map((w) => ({
-        id: w.id,
-        date: w.date,
-        name: w.type || w.template_name || 'Workout',
-        note: w.note,
-        exercises: w.statistics?.exercises_count ?? 0,
-        exercisesList: (w.sets || []).reduce((acc, s) => {
+
+      const list = (data?.workouts || []).map((w) => {
+        // Поддержка как "расширенного" ответа backend (с sets и statistics),
+        // так и "простого" (только агрегаты по тренировке).
+        const hasSets = Array.isArray(w.sets) && w.sets.length > 0;
+
+        const exercisesCount =
+          (w.statistics && typeof w.statistics.exercises_count === 'number'
+            ? w.statistics.exercises_count
+            : typeof w.exercises_count === 'number'
+            ? w.exercises_count
+            : 0);
+
+        const base = {
+          id: w.id,
+          date: w.date,
+          name: w.type || w.template_name || 'Workout',
+          note: w.note,
+          exercises: exercisesCount,
+        };
+
+        if (!hasSets) {
+          return { ...base, exercisesList: [] };
+        }
+
+        const exercisesMap = (w.sets || []).reduce((acc, s) => {
           const key = String(s.exercise_id);
           if (!acc[key]) {
             acc[key] = {
@@ -42,16 +61,15 @@ const WorkoutHistory = forwardRef((props, ref) => {
           acc[key].series.push({ setNumber: s.set_number, weight: s.weight, reps: s.reps });
           acc[key].sets = acc[key].series.length;
           return acc;
-        }, {}),
-      }));
+        }, {});
 
-      // exercisesList reducer returns map; convert to array
-      const normalized = list.map((w) => ({
-        ...w,
-        exercisesList: Object.values(w.exercisesList || {}),
-      }));
+        return {
+          ...base,
+          exercisesList: Object.values(exercisesMap),
+        };
+      });
 
-      setWorkouts(normalized);
+      setWorkouts(list);
     } catch (e) {
       console.error('Failed to load workouts history:', e);
       setWorkouts([]);

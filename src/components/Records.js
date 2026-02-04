@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef, useState } from 'react';
 import EditRecordModal from './EditRecordModal';
 import ErrorAlert from './ErrorAlert';
 import { getRecords } from '../utils/api';
 import '../styles/components/Records.css';
 
-const Records = () => {
+const Records = forwardRef((props, ref) => {
   const [sortBy, setSortBy] = useState('max_weight');
   const [editingRecord, setEditingRecord] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -16,13 +16,13 @@ const Records = () => {
   const [showErrorAlert, setShowErrorAlert] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
+  const loadRecords = (currentSortBy = sortBy) => {
     let cancelled = false;
     setIsLoading(true);
     setShowErrorAlert(false);
     setErrorMessage('');
 
-    getRecords({ sortBy })
+    getRecords({ sortBy: currentSortBy })
       .then((data) => {
         if (cancelled) return;
         const rows = (data?.records || []).map((r) => ({
@@ -50,7 +50,16 @@ const Records = () => {
     return () => {
       cancelled = true;
     };
+  };
+
+  useEffect(() => {
+    const cancel = loadRecords(sortBy);
+    return cancel;
   }, [sortBy]);
+
+  useImperativeHandle(ref, () => ({
+    reload: () => loadRecords(sortBy),
+  }));
 
   const visibleRecords = records
     .filter(record => !deletedRecordIds.has(record.id))
@@ -204,6 +213,6 @@ const Records = () => {
       )}
     </div>
   );
-};
+});
 
 export default Records;
