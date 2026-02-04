@@ -186,7 +186,6 @@ const Records = forwardRef((props, ref) => {
         )}
       </div>
 
-      {/* Edit Record Modal */}
       <EditRecordModal
         isOpen={!!editingRecord}
         onClose={() => setEditingRecord(null)}
@@ -194,7 +193,6 @@ const Records = forwardRef((props, ref) => {
         onSave={handleSaveEdit}
       />
 
-      {/* Delete Confirmation */}
       {showDeleteConfirm && (
         <div className="delete-confirm-overlay" onClick={() => setShowDeleteConfirm(false)}>
           <div className="delete-confirm-content" onClick={(e) => e.stopPropagation()}>

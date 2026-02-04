@@ -10,7 +10,6 @@ const TemplatesModal = ({ isOpen, onClose, onSelectTemplate }) => {
   const [showAddExerciseModal, setShowAddExerciseModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
 
-  // Load templates from localStorage on mount and when modal opens
   useEffect(() => {
     if (isOpen) {
       loadTemplates();
@@ -20,7 +19,6 @@ const TemplatesModal = ({ isOpen, onClose, onSelectTemplate }) => {
   const loadTemplates = () => {
     const savedTemplates = getTemplates();
     if (savedTemplates.length === 0) {
-      // Initialize with default templates if none exist
       const defaultTemplates = [
         { id: Date.now(), name: 'Push Day', exercises: [], createdAt: new Date().toISOString() },
         { id: Date.now() + 1, name: 'Pull Day', exercises: [], createdAt: new Date().toISOString() },
@@ -54,7 +52,7 @@ const TemplatesModal = ({ isOpen, onClose, onSelectTemplate }) => {
       saveTemplate(updatedTemplate);
       loadTemplates();
       setSelectedTemplate(updatedTemplate);
-      setShowAddExerciseModal(false); // Close the modal after adding
+      setShowAddExerciseModal(false);
     }
   };
 

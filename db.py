@@ -69,22 +69,17 @@ def init_db():
     with get_conn() as conn:
         conn.executescript(ddl)
 
-        # миграция для старой базы, где этих колонок ещё нет
         _add_column_if_missing(conn, "Workouts", "note", "TEXT")
         _add_column_if_missing(conn, "Exercises", "note", "TEXT")
-        # Додаємо поле для відстеження шаблону
         _add_column_if_missing(conn, "Workouts", "template_id", "INTEGER")
         
-        # Додаємо індекс для template_id та зовнішній ключ
         try:
             conn.execute("""
                 CREATE INDEX IF NOT EXISTS idx_workouts_template_id 
                 ON Workouts(template_id)
             """)
-            # Перевіряємо чи існує зовнішній ключ (SQLite не підтримує додавання FK через ALTER)
-            # Тому просто додамо індекс, а валідацію зробимо на рівні застосунку
         except sqlite3.OperationalError:
-            pass  # Індекс вже існує
+            pass  
 
 
 def seed_exercises():

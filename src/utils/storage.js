@@ -1,11 +1,8 @@
-// Utility functions for localStorage operations
-
 const STORAGE_KEYS = {
   WORKOUTS: 'workoutlog_workouts',
   TEMPLATES: 'workoutlog_templates',
 };
 
-// Workouts
 export const saveWorkout = (workout) => {
   try {
     const workouts = getWorkouts();
@@ -18,7 +15,7 @@ export const saveWorkout = (workout) => {
       notes: workout.notes || '',
       createdAt: new Date().toISOString(),
     };
-    workouts.unshift(newWorkout); // Add to beginning
+    workouts.unshift(newWorkout); 
     localStorage.setItem(STORAGE_KEYS.WORKOUTS, JSON.stringify(workouts));
     return newWorkout;
   } catch (error) {
@@ -65,7 +62,6 @@ export const deleteWorkout = (workoutId) => {
   }
 };
 
-// Templates
 export const saveTemplate = (template) => {
   try {
     const templates = getTemplates();
@@ -79,10 +75,9 @@ export const saveTemplate = (template) => {
     
     const existingIndex = templates.findIndex(t => t.id === newTemplate.id);
     if (existingIndex !== -1) {
-      // Update existing
+
       templates[existingIndex] = newTemplate;
     } else {
-      // Add new
       templates.push(newTemplate);
     }
     

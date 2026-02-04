@@ -43,7 +43,6 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
       const workoutId = created?.id;
       if (!workoutId) throw new Error('Backend did not return workout id');
 
-      // Create all sets. We rely on AddExerciseModal to provide exerciseId for non-custom exercises.
       const setCreates = [];
       for (const ex of exercises) {
         if (!ex.exerciseId) {
@@ -127,7 +126,6 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
               />
             </div>
 
-            {/* Список упражнений */}
             <div className="exercises-list">
               {exercises.length === 0 ? (
                 <div className="empty-exercises">
@@ -160,7 +158,6 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
               )}
             </div>
 
-            {/* Workout Notes */}
             <div className="workout-notes-section">
               <label className="workout-notes-label">Workout Notes (optional)</label>
               <textarea
@@ -172,7 +169,6 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
               />
             </div>
 
-            {/* Кнопка добавления упражнения - внизу */}
             <div className="add-exercise-button-container">
               <button 
                 className="add-exercise-button"
@@ -192,14 +188,12 @@ const CreateWorkoutModal = ({ isOpen, onClose, onSave }) => {
         </div>
       </div>
 
-      {/* Модальное окно добавления упражнения (nested) */}
       <AddExerciseModal
         isOpen={showAddExerciseModal}
         onClose={() => setShowAddExerciseModal(false)}
         onAdd={handleAddExercise}
       />
 
-      {/* Модальное окно Templates (nested) */}
       <TemplatesModal
         isOpen={showTemplatesModal}
         onClose={() => setShowTemplatesModal(false)}

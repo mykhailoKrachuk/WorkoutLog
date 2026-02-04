@@ -63,7 +63,6 @@ export async function getWorkoutsHistory({ limit = 50, includeStats = true } = {
   qs.set('include_stats', includeStats ? 'true' : 'false');
   const data = await apiFetch(`/workouts/history?${qs.toString()}`);
 
-  // Backend может вернуть либо массив тренировок, либо объект { workouts, summary }
   if (Array.isArray(data)) {
     return { workouts: data };
   }

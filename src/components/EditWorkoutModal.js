@@ -48,7 +48,6 @@ const EditWorkoutModal = ({ isOpen, onClose, workout, onSave }) => {
           </div>
 
           <div className="edit-workout-body">
-            {/* Workout Name */}
             <div className="input-group">
               <label className="input-label">Workout Name</label>
               <input
@@ -60,7 +59,6 @@ const EditWorkoutModal = ({ isOpen, onClose, workout, onSave }) => {
               />
             </div>
 
-            {/* Exercises List */}
             <div className="exercises-list">
               <div className="exercises-list-header">
                 <h3>Exercises</h3>
@@ -96,7 +94,6 @@ const EditWorkoutModal = ({ isOpen, onClose, workout, onSave }) => {
               )}
             </div>
 
-            {/* Add Exercise Button */}
             <button 
               className="add-exercise-button"
               onClick={() => setShowAddExerciseModal(true)}
@@ -105,7 +102,6 @@ const EditWorkoutModal = ({ isOpen, onClose, workout, onSave }) => {
               Add Exercise
             </button>
 
-            {/* Workout Notes */}
             <div className="input-group">
               <label className="input-label">Workout Notes (optional)</label>
               <textarea

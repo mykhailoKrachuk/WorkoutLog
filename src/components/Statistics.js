@@ -18,19 +18,14 @@ const Statistics = forwardRef((props, ref) => {
         if (cancelled) return;
         const workouts = data?.workouts || [];
         const summary = data?.summary || {};
-
         const now = new Date();
         const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const workoutsThisMonth = workouts.filter((w) => (w.date || '').startsWith(thisMonth)).length;
-
-        // Общее количество тренировок
         const totalWorkouts =
           typeof summary.total_workouts === 'number'
             ? summary.total_workouts
             : workouts.length;
 
-        // Общее количество сетов: если backend не вернул summary,
-        // считаем на фронте из statistics.sets_count или sets_count.
         const totalSets =
           typeof summary.total_sets === 'number'
             ? summary.total_sets
@@ -44,7 +39,6 @@ const Statistics = forwardRef((props, ref) => {
                 return acc + perWorkoutSets;
               }, 0);
 
-        // Средний volume / тренировку: если нет summary, считаем по total_volume
         let avgVolumePerWorkout =
           typeof summary.avg_volume_per_workout === 'number'
             ? summary.avg_volume_per_workout
@@ -62,7 +56,6 @@ const Statistics = forwardRef((props, ref) => {
                 return totalVolume / workouts.length || 0;
               })();
 
-        // Немного округлим volume для красивого вывода
         avgVolumePerWorkout = Math.round(avgVolumePerWorkout * 10) / 10;
 
         setStats([

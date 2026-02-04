@@ -17,7 +17,6 @@ const MainScreen = () => {
   };
 
   const handleSaveWorkout = (workout) => {
-    // Reload data after a short delay to ensure backend has committed everything
     setTimeout(() => {
       if (workoutHistoryRef.current) {
         workoutHistoryRef.current.reload();
@@ -33,13 +32,11 @@ const MainScreen = () => {
 
   return (
     <div className="main-screen">
-      {/* Header */}
       <header className="main-header">
         <div className="logo">Workoutlog</div>
         <div className="user-name">{userName}</div>
       </header>
 
-      {/* Main Content */}
       <div className="main-content">
         <div className="content-row">
           <div className="content-block">
@@ -59,12 +56,10 @@ const MainScreen = () => {
         </div>
       </div>
 
-      {/* Floating Action Button */}
       <button className="fab" onClick={handleAddWorkout} aria-label="Add workout">
         <span className="fab-icon">+</span>
       </button>
 
-      {/* Модальное окно */}
       <CreateWorkoutModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

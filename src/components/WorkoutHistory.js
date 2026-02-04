@@ -10,7 +10,6 @@ const WorkoutHistory = forwardRef((props, ref) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [workoutToDelete, setWorkoutToDelete] = useState(null);
 
-  // Load workouts from localStorage on mount
   useEffect(() => {
     loadWorkouts();
   }, []);
@@ -20,8 +19,6 @@ const WorkoutHistory = forwardRef((props, ref) => {
       const data = await getWorkoutsHistory({ limit: 50, includeStats: false });
 
       const list = (data?.workouts || []).map((w) => {
-        // Поддержка как "расширенного" ответа backend (с sets и statistics),
-        // так и "простого" (только агрегаты по тренировке).
         const hasSets = Array.isArray(w.sets) && w.sets.length > 0;
 
         const exercisesCount =
@@ -76,7 +73,6 @@ const WorkoutHistory = forwardRef((props, ref) => {
     }
   };
 
-  // Expose load function for parent component
   useImperativeHandle(ref, () => ({
     reload: loadWorkouts
   }));

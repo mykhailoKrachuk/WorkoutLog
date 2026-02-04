@@ -41,7 +41,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
           byGroup[group].push({ id, name });
         }
 
-        // Sort for stable UI.
         for (const g of Object.keys(byGroup)) {
           byGroup[g].sort((a, b) => a.name.localeCompare(b.name));
         }
@@ -50,7 +49,7 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
         setExercisesByGroup(byGroup);
         setMuscleGroups(groups);
 
-        // If current selection no longer exists, reset it.
+        
         if (selectedMuscleGroup && !byGroup[selectedMuscleGroup]) {
           setSelectedMuscleGroup('');
           setSelectedExercise('');
@@ -77,7 +76,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
   }, [selectedMuscleGroup, exercisesByGroup]);
 
   const handleAdd = async () => {
-    // Валидация
     if (!selectedMuscleGroup) {
       const errorMsg = 'Wybierz grupę mięśni';
       setErrorMessage(errorMsg);
@@ -138,7 +136,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
       return;
     }
 
-    // Создание серий
     const series = [];
     for (let i = 0; i < setsNum; i++) {
       series.push({
@@ -253,7 +250,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
           </div>
 
           <div className="add-exercise-modal-body">
-            {/* Picker группы мышц */}
             <div className="picker-group">
               <label className="picker-label">Grupa mięśni</label>
               <select
@@ -261,9 +257,9 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
                 value={selectedMuscleGroup}
                 onChange={(e) => {
                   setSelectedMuscleGroup(e.target.value);
-                  setSelectedExercise(''); // Сброс упражнения при смене группы
+                  setSelectedExercise(''); 
                 }}
-                disabled={isLoadingExercises}
+                disabled={isLoadingExercises}fg
               >
                 <option value="">
                   {isLoadingExercises ? 'Ładowanie...' : 'Wybierz grupę mięśni'}
@@ -276,7 +272,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
               </select>
             </div>
 
-            {/* Picker упражнения или Custom */}
             {!isCustomExercise ? (
               <div className="picker-group">
                 <label className="picker-label">Ćwiczenie</label>
@@ -323,7 +318,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
               </div>
             )}
 
-            {/* Вес */}
             <div className="input-group">
               <label className="input-label">Weight (kg)</label>
               <input
@@ -337,7 +331,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
               />
             </div>
 
-            {/* Повторения */}
             <div className="input-group">
               <label className="input-label">Reps</label>
               <input
@@ -350,7 +343,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
               />
             </div>
 
-            {/* Количество сетов */}
             <div className="input-group">
               <label className="input-label">Number of Sets</label>
               <input
@@ -363,7 +355,6 @@ const AddExerciseModal = ({ isOpen, onClose, onAdd }) => {
               />
             </div>
 
-            {/* Заметки */}
             <div className="input-group">
               <label className="input-label">Notes (optional)</label>
               <textarea

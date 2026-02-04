@@ -9,11 +9,9 @@ const WorkoutDetailsModal = ({ isOpen, onClose, workout, onDelete, onEdit, onSav
   const [isLoading, setIsLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
-  // Подгружаем полные данные тренировки (включая sets) при открытии модалки
   useEffect(() => {
     if (!isOpen || !workout?.id) return;
 
-    // Если в уже переданном объекте есть exercisesList, используем его
     if (workout.exercisesList && workout.exercisesList.length > 0) {
       setDetailedWorkout(workout);
       return;
@@ -55,7 +53,6 @@ const WorkoutDetailsModal = ({ isOpen, onClose, workout, onDelete, onEdit, onSav
 
         setDetailedWorkout({
           ...workout,
-          // Берём свежие данные по дате/типу/заметке из backend, если есть
           date: data.date || workout.date,
           name: data.type || data.template_name || workout.name,
           note: data.note ?? workout.note,
@@ -141,7 +138,6 @@ const WorkoutDetailsModal = ({ isOpen, onClose, workout, onDelete, onEdit, onSav
                     <button 
                       className="delete-exercise-btn"
                       onClick={() => {
-                        // Handle exercise deletion
                         console.log('Delete exercise', ex.id);
                       }}
                     >

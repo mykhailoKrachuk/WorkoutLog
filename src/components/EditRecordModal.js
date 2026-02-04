@@ -26,7 +26,6 @@ const EditRecordModal = ({ isOpen, onClose, record, onSave }) => {
   }, [record]);
 
   const handleSave = () => {
-    // Валидация
     if (!maxWeight || maxWeight.trim() === '') {
       const errorMsg = 'Wprowadź maksymalną wagę';
       setErrorMessage(errorMsg);
